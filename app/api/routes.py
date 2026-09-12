@@ -11,6 +11,7 @@ need to change when that happens.
 import datetime as dt
 
 from fastapi import APIRouter, Request
+from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
 from app.db.safe_layer import SafeDBLayer, SalesQueryInput, InventoryQueryInput
@@ -34,9 +35,11 @@ class AskResponse(BaseModel):
 
 
 @router.post("/ask", response_model=AskResponse)
-async def ask(req: AskRequest) -> AskResponse:
-    # TODO: replace with a call into app/graph/ once that's built.
-    return AskResponse(answer=f"You asked: {req.question}")
+async def ask(request: Request, req: AskRequest) -> AskResponse:
+    result = await request.app.state.graph.ainvoke(
+        {"messages": [HumanMessage(content=req.question)]}
+    )
+    return AskResponse(answer=str(result["messages"][-1].content))
 
 
 @router.get("/sales")
