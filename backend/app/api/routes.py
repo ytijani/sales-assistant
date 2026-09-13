@@ -15,7 +15,7 @@ from langchain_core.messages import HumanMessage, ToolMessage
 from pydantic import BaseModel
 
 from app.db.safe_layer import SafeDBLayer, SalesQueryInput, InventoryQueryInput
-from app.graph.schemas import Answer, StructuredAnalysis
+from app.graph.schemas import Answer, Chart, StructuredAnalysis
 
 router = APIRouter()
 
@@ -36,6 +36,7 @@ class Evidence(BaseModel):
 class AskResponse(BaseModel):
     answer: Answer
     evidence: list[Evidence]
+    charts: list[Chart]
     suggested_actions: list[str]
 
 
@@ -65,6 +66,7 @@ async def ask(req: AskRequest, request: Request) -> AskResponse:
     return AskResponse(
         answer=analysis.answer,
         evidence=build_evidence(result["messages"]),
+        charts=analysis.charts,
         suggested_actions=analysis.suggested_actions,
     )
 

@@ -1,6 +1,7 @@
 
 
 
+import datetime as dt
 from typing import Annotated
 
 from pydantic import BaseModel
@@ -22,6 +23,15 @@ class GraphState(BaseModel):
 
 SYSTEM_PROMPT = """You are a business data analyst investigating
 questions about sales and inventory using the tools provided.
+
+Today is {today}. Interpret relative dates using this date. For example, "this
+month" means from the first day of the current calendar month through today.
+
+You MUST call an appropriate tool before answering any question about sales,
+products, branches, or inventory. Never answer a data question from general
+knowledge. For questions about best-selling or worst-selling products, use
+get_sales_by_product. For questions about branch performance, use
+get_sales_by_branch.
  
 For open-ended questions like "why did sales drop?", do NOT answer
 after a single tool call. Investigate step by step:
@@ -55,12 +65,41 @@ Final-answer style:
 - End with a practical next step only when the data supports one.
 """
 
-STRUCTURED_OUTPUT_PROMPT = """Create the final response from the tool results.
+STRUCTURED_OUTPUT_PROMPT = """The data investigation is complete. Do not call
+tools. Create the final response only from the tool results already in this
+conversation.
+
+Return ONLY valid JSON with this exact shape:
+{
+  "answer": {
+    "summary": "string",
+    "findings": ["string"],
+    "conclusion": "string"
+  },
+  "charts": [
+    {
+      "id": "string",
+      "type": "bar or line",
+      "title": "string",
+      "x_axis": "string",
+      "y_axis": "string",
+      "data": [{"label": "string", "value": 0}]
+    }
+  ],
+  "suggested_actions": ["string"]
+}
 
 Only state facts supported by the tool messages. Do not invent evidence, numbers,
 or tool calls. If the tools did not provide enough information, say so clearly in
 the conclusion and leave suggested_actions empty unless an action is supported by
 the retrieved data.
+
+For charts, return at most three. When a tool result contains two or more
+comparable numeric values, you MUST return at least one chart. A chart must
+contain only numeric points that can be read or calculated directly from the
+tool results. Use a bar chart for products, branches, or inventory categories,
+and a line chart only when the tool results include time-series data. Return an
+empty charts list only when the retrieved data has no chartable numeric series.
 """
 
 
@@ -74,17 +113,20 @@ def build_graph(db:SafeDBLayer):
    ]
    llm = get_llm()
    llm_with_tools = llm.bind_tools(tools)
-   structured_llm = llm.with_structured_output(StructuredAnalysis)
+   structured_llm = llm.with_structured_output(
+      StructuredAnalysis,
+      method="json_mode",
+   )
+   system_prompt = SYSTEM_PROMPT.format(today=dt.date.today().isoformat())
    
    async def call_model(state: GraphState):
-      messages = [SystemMessage(content=SYSTEM_PROMPT),*state.messages]
+      messages = [SystemMessage(content=system_prompt),*state.messages]
       response = await llm_with_tools.ainvoke(messages)
       return {"messages": [response]}
 
    async def format_response(state: GraphState):
       analysis = await structured_llm.ainvoke(
          [
-            SystemMessage(content=SYSTEM_PROMPT),
             SystemMessage(content=STRUCTURED_OUTPUT_PROMPT),
             *state.messages,
          ]
