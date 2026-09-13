@@ -17,14 +17,84 @@ from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlglot import exp, parse
+from sqlglot.errors import ParseError
 
 MAX_ROWS = 200
+QUERY_TIMEOUT_MS = 3_000
+ALLOWED_RELATIONS = frozenset({"sales", "branches", "products", "inventory_view"})
+ALLOWED_ANONYMOUS_FUNCTIONS = frozenset({"DATE_TRUNC", "ROUND", "COALESCE"})
+
+
+class UnsafeSqlError(ValueError):
+    """Raised when generated SQL violates the agent query policy."""
+
+
+class SqlQueryResult(BaseModel):
+    sql: str
+    columns: list[str]
+    rows: list[dict[str, Any]]
+
+
+def validate_generated_sql(sql: str) -> str:
+    """Parse and validate a narrowly scoped, read-only SQL query.
+
+    This is intentionally restrictive. Database permissions remain the final
+    control: the application must still connect as a read-only database role.
+    """
+    if not sql or len(sql) > 5_000:
+        raise UnsafeSqlError("query must contain at most 5,000 characters")
+    if "--" in sql or "/*" in sql:
+        raise UnsafeSqlError("SQL comments are not allowed")
+
+    try:
+        statements = parse(sql, read="postgres")
+    except ParseError as exc:
+        raise UnsafeSqlError("query is not valid PostgreSQL") from exc
+
+    if len(statements) != 1:
+        raise UnsafeSqlError("exactly one SQL statement is allowed")
+
+    statement = statements[0]
+    if not isinstance(statement, (exp.Select, exp.Union)):
+        raise UnsafeSqlError("only SELECT queries are allowed")
+    if statement.find(exp.CTE):
+        raise UnsafeSqlError("CTEs are not allowed")
+    if statement.find(exp.Star):
+        raise UnsafeSqlError("SELECT * is not allowed")
+    if statement.find(exp.Lock):
+        raise UnsafeSqlError("locking clauses are not allowed")
+
+    tables = list(statement.find_all(exp.Table))
+    if not tables:
+        raise UnsafeSqlError("query must read from an approved relation")
+    for table in tables:
+        if table.db and table.db.lower() != "public":
+            raise UnsafeSqlError("only the public schema is allowed")
+        if table.name.lower() not in ALLOWED_RELATIONS:
+            raise UnsafeSqlError(f"relation '{table.name}' is not approved")
+
+    for function in statement.find_all(exp.Anonymous):
+        if function.name.upper() not in ALLOWED_ANONYMOUS_FUNCTIONS:
+            raise UnsafeSqlError(f"function '{function.name}' is not approved")
+
+    limit = statement.args.get("limit")
+    if limit is None or not isinstance(limit.expression, exp.Literal):
+        raise UnsafeSqlError(f"a numeric LIMIT of {MAX_ROWS} or less is required")
+    try:
+        limit_value = int(limit.expression.this)
+    except (TypeError, ValueError) as exc:
+        raise UnsafeSqlError(f"a numeric LIMIT of {MAX_ROWS} or less is required") from exc
+    if not 1 <= limit_value <= MAX_ROWS:
+        raise UnsafeSqlError(f"LIMIT must be between 1 and {MAX_ROWS}")
+
+    return statement.sql(dialect="postgres")
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +184,18 @@ class SafeDBLayer:
 
     async def close(self) -> None:
         await self._engine.dispose()
+
+    async def run_validated_sql(self, sql: str) -> SqlQueryResult:
+        """Run SQL only after AST validation, with a transaction-local timeout."""
+        validated_sql = validate_generated_sql(sql)
+        async with self._session_factory.begin() as session:
+            await session.execute(text(f"SET LOCAL statement_timeout = '{QUERY_TIMEOUT_MS}ms'"))
+            result = await session.execute(text(validated_sql))
+            return SqlQueryResult(
+                sql=validated_sql,
+                columns=list(result.keys()),
+                rows=[dict(row._mapping) for row in result],
+            )
 
     # -- Sales -----------------------------------------------------------
 

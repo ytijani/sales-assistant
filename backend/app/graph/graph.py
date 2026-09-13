@@ -10,7 +10,13 @@ from langgraph.graph import END, START, StateGraph, add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from app.db.safe_layer import SafeDBLayer
-from app.tools import make_sales_tool, make_inventory_tool, make_sales_by_product_tool, make_sales_by_branch_tool
+from app.tools import (
+   make_inventory_tool,
+   make_sales_by_branch_tool,
+   make_sales_by_product_tool,
+   make_sales_tool,
+   make_sql_tool,
+)
 from app.llm import get_llm
 from app.graph.schemas import StructuredAnalysis
 
@@ -47,7 +53,9 @@ after a single tool call. Investigate step by step:
  
 Rules:
 - Only use the tools given to you. Never claim to run SQL or access
-  the database directly — you don't have that ability.
+  the database directly — you don't have that ability. For custom analysis not
+  covered by a dedicated tool, you may use query_sales_data; its safety policy
+  validates generated SQL before execution.
 - If a tool returns "No records found" or a validation error, relay
   that plainly instead of guessing at numbers.
 - Do not speculate about data you haven't retrieved via a tool call.
@@ -109,7 +117,8 @@ def build_graph(db:SafeDBLayer):
       make_sales_tool(db),
       make_sales_by_product_tool(db),
       make_sales_by_branch_tool(db),
-      make_inventory_tool(db)
+      make_inventory_tool(db),
+      make_sql_tool(db),
    ]
    llm = get_llm()
    llm_with_tools = llm.bind_tools(tools)
