@@ -10,19 +10,17 @@ need to change when that happens.
 
 import datetime as dt
 
-from fastapi import APIRouter, Request
-from langchain_core.messages import HumanMessage
+from fastapi import APIRouter, HTTPException, Request
+from langchain_core.messages import HumanMessage, ToolMessage
 from pydantic import BaseModel
 
 from app.db.safe_layer import SafeDBLayer, SalesQueryInput, InventoryQueryInput
+from app.graph.schemas import Answer, StructuredAnalysis
 
 router = APIRouter()
 
 
 def get_db(request: Request) -> SafeDBLayer:
-    # Pulls the single SafeDBLayer instance created once at startup
-    # (see app/main.py lifespan) — never constructs a new one per
-    # request.
     return request.app.state.db
 
 
@@ -30,16 +28,45 @@ class AskRequest(BaseModel):
     question: str
 
 
+class Evidence(BaseModel):
+    source: str
+    data: list[str]
+
+
 class AskResponse(BaseModel):
-    answer: str
+    answer: Answer
+    evidence: list[Evidence]
+    suggested_actions: list[str]
+
+
+def build_evidence(messages: list) -> list[Evidence]:
+    """Expose the actual tool output that supports the LLM's analysis."""
+    evidence: list[Evidence] = []
+    for message in messages:
+        if isinstance(message, ToolMessage):
+            content = message.content
+            data = content if isinstance(content, list) else str(content).splitlines()
+            evidence.append(Evidence(source=message.name, data=data))
+    return evidence
 
 
 @router.post("/ask", response_model=AskResponse)
-async def ask(request: Request, req: AskRequest) -> AskResponse:
-    result = await request.app.state.graph.ainvoke(
-        {"messages": [HumanMessage(content=req.question)]}
+async def ask(req: AskRequest, request: Request) -> AskResponse:
+    graph = request.app.state.graph
+    result = await graph.ainvoke({"messages": [HumanMessage(content=req.question)]})
+    analysis = result.get("analysis")
+
+    if not isinstance(analysis, StructuredAnalysis):
+        raise HTTPException(
+            status_code=502,
+            detail="The model did not return a valid structured response. Try again.",
+        )
+
+    return AskResponse(
+        answer=analysis.answer,
+        evidence=build_evidence(result["messages"]),
+        suggested_actions=analysis.suggested_actions,
     )
-    return AskResponse(answer=str(result["messages"][-1].content))
 
 
 @router.get("/sales")

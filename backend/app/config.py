@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # Required starting now — the DB layer is wired in.
-    agent_database_url: str = ""
-    groq_api_key:str = ""
+    agent_database_url: str | None = None
+    groq_api_key:str | None = None
 
 
 settings = Settings()

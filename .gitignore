@@ -13,3 +13,7 @@ wheels/
 
 # env 
 .env
+
+# JavaScript dependencies and builds
+node_modules/
+frontend/dist/

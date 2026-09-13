@@ -26,6 +26,13 @@ def make_inventory_tool(db:SafeDBLayer):
         )
 
         rows = await db.get_inventory_levels(params)
+        if not rows:
+            return "No inventory records matched that filter."
+ 
+        return "\n".join(
+            f"{r.sku} | {r.product_name} | {r.category} | "
+            f"on hand: {r.quantity_on_hand} | reorder at: {r.reorder_threshold}"
+            for r in rows
+        )
 
-        return str(rows)
-    return [get_inventory_levels]
+    return get_inventory_levels

@@ -26,12 +26,17 @@ def make_sales_by_product_tool(db: SafeDBLayer):
         )
 
         rows = await db.get_sales_by_product(params)
+        if not rows:
+            return "No product sales found for that range."
+        return "\n".join(
+            f"{r.product_sku} ({r.product_name}) | {r.units_sold} units | {r.revenue} MAD"
+            for r in rows
+        )
 
-        return str(rows)
-    return [get_sales_by_product]
+    return get_sales_by_product
 
 
-def make_sales_by_branch(db: SafeDBLayer):
+def make_sales_by_branch_tool(db: SafeDBLayer):
     @tool
     async def get_sales_by_branch(
         start_date: str,
@@ -49,6 +54,10 @@ def make_sales_by_branch(db: SafeDBLayer):
         )
 
         rows = await db.get_sales_by_branch(params)
-
-        return str(rows)
-    return [get_sales_by_branch]
+        if not rows:
+            return "No branch sales found for that range."
+        return "\n".join(
+            f"{r.branch_id} ({r.branch_name}) | {r.units_sold} units | {r.revenue} MAD"
+            for r in rows
+        )
+    return get_sales_by_branch

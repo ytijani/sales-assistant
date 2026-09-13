@@ -1,11 +1,7 @@
-
-
-
 from datetime import datetime
 from langchain_core.tools import tool
 
 from app.db.safe_layer import SafeDBLayer, SalesQueryInput
-
 
 
 def make_sales_tool(db: SafeDBLayer):
@@ -26,7 +22,11 @@ def make_sales_tool(db: SafeDBLayer):
         )
 
         rows = await db.get_sales_summary(params)
+        if not rows:
+            return "No sales records found for that range/filter."
+        return "\n".join(
+            f"{r.sale_date} | {r.branch_id} | {r.product_sku} | {r.units_sold} units | {r.revenue} MAD"
+            for r in rows
+        )
 
-        return str(rows)
-    return [get_sales_summary]
-        
+    return get_sales_summary

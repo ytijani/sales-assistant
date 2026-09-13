@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from app.config import settings
 from app.db.safe_layer import SafeDBLayer
 from app.graph.graph import build_graph
-from app.tools.sales_tool import get_sales_summary
 from .api import route
 
 
@@ -14,7 +13,7 @@ from .api import route
 async def lifespan(app: FastAPI):
 
     # Startup
-    db = SafeDBLayer(settings.agent_database_url)
+    db = SafeDBLayer(settings.agent_database_url or "")
     app.state.db = db
     app.state.graph = build_graph(db)
 
