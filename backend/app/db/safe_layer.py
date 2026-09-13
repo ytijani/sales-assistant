@@ -36,6 +36,18 @@ class UnsafeSqlError(ValueError):
     """Raised when generated SQL violates the agent query policy."""
 
 
+def json_safe_value(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, dt.datetime):
+        return value.date().isoformat()
+    if isinstance(value, dt.date):
+        return value.isoformat()
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
 class SqlQueryResult(BaseModel):
     sql: str
     columns: list[str]
@@ -191,11 +203,12 @@ class SafeDBLayer:
         async with self._session_factory.begin() as session:
             await session.execute(text(f"SET LOCAL statement_timeout = '{QUERY_TIMEOUT_MS}ms'"))
             result = await session.execute(text(validated_sql))
-            return SqlQueryResult(
-                sql=validated_sql,
-                columns=list(result.keys()),
-                rows=[dict(row._mapping) for row in result],
-            )
+            columns = list(result.keys())
+            rows = [
+                {key: json_safe_value(value) for key, value in row._mapping.items()}
+                for row in result
+            ]
+            return SqlQueryResult(sql=validated_sql, columns=columns, rows=rows)
 
     # -- Sales -----------------------------------------------------------
 

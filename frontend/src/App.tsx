@@ -44,7 +44,17 @@ const exampleQuestions = [
   'Are there any low-stock products I should review?',
 ]
 
+function formatChartNumber(value: number) {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)
+}
+
 function AnalysisChart({ chart }: { chart: Chart }) {
+  const points = chart.data.filter(
+    (point) => point.label && Number.isFinite(point.value),
+  )
+  if (points.length < 2) return null
+
+  const crowded = points.length > 6
   const commonAxisProps = {
     axisLine: false,
     tickLine: false,
@@ -60,22 +70,38 @@ function AnalysisChart({ chart }: { chart: Chart }) {
       <div className="mt-5 h-72" aria-label={chart.title}>
         <ResponsiveContainer width="100%" height="100%">
           {chart.type === 'line' ? (
-            <LineChart data={chart.data} margin={{ top: 8, right: 8, left: -12, bottom: 8 }}>
+            <LineChart data={points} margin={{ top: 8, right: 8, left: -12, bottom: crowded ? 24 : 8 }}>
               <CartesianGrid vertical={false} stroke="#e4e8e2" strokeDasharray="3 3" />
-              <XAxis dataKey="label" {...commonAxisProps} />
-              <YAxis {...commonAxisProps} />
+              <XAxis
+                dataKey="label"
+                {...commonAxisProps}
+                interval={0}
+                angle={crowded ? -25 : 0}
+                textAnchor={crowded ? 'end' : 'middle'}
+                height={crowded ? 60 : 30}
+              />
+              <YAxis {...commonAxisProps} tickFormatter={formatChartNumber} />
               <Tooltip
+                formatter={(value) => [formatChartNumber(Number(value)), chart.y_axis]}
                 cursor={{ stroke: '#8fb4a1', strokeWidth: 1 }}
                 contentStyle={{ border: '1px solid #d8e1d9', borderRadius: 8, boxShadow: '0 8px 20px rgba(22,40,33,.1)' }}
               />
               <Line type="monotone" dataKey="value" stroke="#39745e" strokeWidth={3} dot={{ r: 4, fill: '#39745e' }} />
             </LineChart>
           ) : (
-            <BarChart data={chart.data} margin={{ top: 8, right: 8, left: -12, bottom: 8 }}>
+            <BarChart data={points} margin={{ top: 8, right: 8, left: -12, bottom: crowded ? 24 : 8 }}>
               <CartesianGrid vertical={false} stroke="#e4e8e2" strokeDasharray="3 3" />
-              <XAxis dataKey="label" {...commonAxisProps} />
-              <YAxis {...commonAxisProps} />
+              <XAxis
+                dataKey="label"
+                {...commonAxisProps}
+                interval={0}
+                angle={crowded ? -25 : 0}
+                textAnchor={crowded ? 'end' : 'middle'}
+                height={crowded ? 60 : 30}
+              />
+              <YAxis {...commonAxisProps} tickFormatter={formatChartNumber} />
               <Tooltip
+                formatter={(value) => [formatChartNumber(Number(value)), chart.y_axis]}
                 cursor={{ fill: '#eff5ef' }}
                 contentStyle={{ border: '1px solid #d8e1d9', borderRadius: 8, boxShadow: '0 8px 20px rgba(22,40,33,.1)' }}
               />
