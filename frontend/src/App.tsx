@@ -1,5 +1,28 @@
 
 import { type FormEvent, useState } from 'react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+
+type Chart = {
+  id: string
+  type: 'bar' | 'line'
+  title: string
+  x_axis: string
+  y_axis: string
+  data: Array<{
+    label: string
+    value: number
+  }>
+}
 
 type AnalysisResponse = {
   answer: {
@@ -11,6 +34,7 @@ type AnalysisResponse = {
     source: string
     data: string[]
   }>
+  charts: Chart[]
   suggested_actions: string[]
 }
 
@@ -19,6 +43,50 @@ const exampleQuestions = [
   'Which products had the lowest sales last week?',
   'Are there any low-stock products I should review?',
 ]
+
+function AnalysisChart({ chart }: { chart: Chart }) {
+  const commonAxisProps = {
+    axisLine: false,
+    tickLine: false,
+    tick: { fill: '#66736e', fontSize: 12 },
+  }
+
+  return (
+    <section className="rounded-2xl border border-[#e0e3db] bg-white p-6 shadow-[0_10px_32px_rgba(22,40,33,0.05)] sm:p-7">
+      <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-[#39745e] uppercase">Data visualization</p>
+      <h2 className="mt-2 text-lg font-semibold">{chart.title}</h2>
+      <p className="mt-1 text-xs text-[#73807a]">{chart.y_axis} by {chart.x_axis}</p>
+
+      <div className="mt-5 h-72" aria-label={chart.title}>
+        <ResponsiveContainer width="100%" height="100%">
+          {chart.type === 'line' ? (
+            <LineChart data={chart.data} margin={{ top: 8, right: 8, left: -12, bottom: 8 }}>
+              <CartesianGrid vertical={false} stroke="#e4e8e2" strokeDasharray="3 3" />
+              <XAxis dataKey="label" {...commonAxisProps} />
+              <YAxis {...commonAxisProps} />
+              <Tooltip
+                cursor={{ stroke: '#8fb4a1', strokeWidth: 1 }}
+                contentStyle={{ border: '1px solid #d8e1d9', borderRadius: 8, boxShadow: '0 8px 20px rgba(22,40,33,.1)' }}
+              />
+              <Line type="monotone" dataKey="value" stroke="#39745e" strokeWidth={3} dot={{ r: 4, fill: '#39745e' }} />
+            </LineChart>
+          ) : (
+            <BarChart data={chart.data} margin={{ top: 8, right: 8, left: -12, bottom: 8 }}>
+              <CartesianGrid vertical={false} stroke="#e4e8e2" strokeDasharray="3 3" />
+              <XAxis dataKey="label" {...commonAxisProps} />
+              <YAxis {...commonAxisProps} />
+              <Tooltip
+                cursor={{ fill: '#eff5ef' }}
+                contentStyle={{ border: '1px solid #d8e1d9', borderRadius: 8, boxShadow: '0 8px 20px rgba(22,40,33,.1)' }}
+              />
+              <Bar dataKey="value" fill="#39745e" radius={[5, 5, 0, 0]} />
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </section>
+  )
+}
 
 function App() {
   const [question, setQuestion] = useState('')
@@ -187,6 +255,14 @@ function App() {
               </section>
             )}
           </div>
+        )}
+
+        {result && result.charts.length > 0 && (
+          <section className="mt-5">
+            <div className="grid gap-5 lg:grid-cols-2">
+              {result.charts.map((chart) => <AnalysisChart key={chart.id} chart={chart} />)}
+            </div>
+          </section>
         )}
       </div>
     </main>
