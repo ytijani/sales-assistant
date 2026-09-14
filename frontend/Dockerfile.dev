@@ -1,0 +1,9 @@
+FROM node:24-slim
+
+WORKDIR /app
+
+COPY . ./
+
+EXPOSE 5173
+
+CMD ["./node_modules/.bin/vite", "--host", "0.0.0.0"]

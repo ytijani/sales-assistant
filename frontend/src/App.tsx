@@ -1,42 +1,16 @@
-
-import { type FormEvent, useState } from 'react'
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-
-type Chart = {
-  id: string
-  type: 'bar' | 'line'
-  title: string
-  x_axis: string
-  y_axis: string
-  data: Array<{
-    label: string
-    value: number
-  }>
-}
-
-type AnalysisResponse = {
-  answer: {
-    summary: string
-    findings: string[]
-    conclusion: string
-  }
-  evidence: Array<{
-    source: string
-    data: string[]
-  }>
-  charts: Chart[]
-  suggested_actions: string[]
-}
+import { type FormEvent, useState, useEffect } from 'react'
+import { AlertCircle } from 'lucide-react'
+import type { AnalysisResponse, HistoryItem } from './types'
+import { Navbar } from './components/Navbar'
+import { SidebarHistory } from './components/SidebarHistory'
+import { QueryInput } from './components/QueryInput'
+import { EmptyDashboard } from './components/EmptyDashboard'
+import { ExecutiveSummary } from './components/ExecutiveSummary'
+import { InteractiveCharts } from './components/InteractiveCharts'
+import { EvidenceInspector } from './components/EvidenceInspector'
+import { ActionPlan } from './components/ActionPlan'
+import { LoadingSkeleton } from './components/LoadingSkeleton'
+import { formatBriefAsMarkdown } from './utils/formatters'
 
 const exampleQuestions = [
   'What changed in sales from 2026-09-01 to 2026-09-07?',
@@ -44,95 +18,48 @@ const exampleQuestions = [
   'Are there any low-stock products I should review?',
 ]
 
-function formatChartNumber(value: number) {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)
-}
+const HISTORY_STORAGE_KEY = 'sales_assistant_history_v1'
 
-function AnalysisChart({ chart }: { chart: Chart }) {
-  const points = chart.data.filter(
-    (point) => point.label && Number.isFinite(point.value),
-  )
-  if (points.length < 2) return null
-
-  const crowded = points.length > 6
-  const commonAxisProps = {
-    axisLine: false,
-    tickLine: false,
-    tick: { fill: '#66736e', fontSize: 12 },
-  }
-
-  return (
-    <section className="rounded-2xl border border-[#e0e3db] bg-white p-6 shadow-[0_10px_32px_rgba(22,40,33,0.05)] sm:p-7">
-      <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-[#39745e] uppercase">Data visualization</p>
-      <h2 className="mt-2 text-lg font-semibold">{chart.title}</h2>
-      <p className="mt-1 text-xs text-[#73807a]">{chart.y_axis} by {chart.x_axis}</p>
-
-      <div className="mt-5 h-72" aria-label={chart.title}>
-        <ResponsiveContainer width="100%" height="100%">
-          {chart.type === 'line' ? (
-            <LineChart data={points} margin={{ top: 8, right: 8, left: -12, bottom: crowded ? 24 : 8 }}>
-              <CartesianGrid vertical={false} stroke="#e4e8e2" strokeDasharray="3 3" />
-              <XAxis
-                dataKey="label"
-                {...commonAxisProps}
-                interval={0}
-                angle={crowded ? -25 : 0}
-                textAnchor={crowded ? 'end' : 'middle'}
-                height={crowded ? 60 : 30}
-              />
-              <YAxis {...commonAxisProps} tickFormatter={formatChartNumber} />
-              <Tooltip
-                formatter={(value) => [formatChartNumber(Number(value)), chart.y_axis]}
-                cursor={{ stroke: '#8fb4a1', strokeWidth: 1 }}
-                contentStyle={{ border: '1px solid #d8e1d9', borderRadius: 8, boxShadow: '0 8px 20px rgba(22,40,33,.1)' }}
-              />
-              <Line type="monotone" dataKey="value" stroke="#39745e" strokeWidth={3} dot={{ r: 4, fill: '#39745e' }} />
-            </LineChart>
-          ) : (
-            <BarChart data={points} margin={{ top: 8, right: 8, left: -12, bottom: crowded ? 24 : 8 }}>
-              <CartesianGrid vertical={false} stroke="#e4e8e2" strokeDasharray="3 3" />
-              <XAxis
-                dataKey="label"
-                {...commonAxisProps}
-                interval={0}
-                angle={crowded ? -25 : 0}
-                textAnchor={crowded ? 'end' : 'middle'}
-                height={crowded ? 60 : 30}
-              />
-              <YAxis {...commonAxisProps} tickFormatter={formatChartNumber} />
-              <Tooltip
-                formatter={(value) => [formatChartNumber(Number(value)), chart.y_axis]}
-                cursor={{ fill: '#eff5ef' }}
-                contentStyle={{ border: '1px solid #d8e1d9', borderRadius: 8, boxShadow: '0 8px 20px rgba(22,40,33,.1)' }}
-              />
-              <Bar dataKey="value" fill="#39745e" radius={[5, 5, 0, 0]} />
-            </BarChart>
-          )}
-        </ResponsiveContainer>
-      </div>
-    </section>
-  )
-}
-
-function App() {
+export default function App() {
   const [question, setQuestion] = useState('')
+  const [activeQuestion, setActiveQuestion] = useState('')
   const [result, setResult] = useState<AnalysisResponse | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const value = question.trim()
-    if (!value || loading) return
+  // Local storage history initialization
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(HISTORY_STORAGE_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history))
+    } catch {
+      // Ignore
+    }
+  }, [history])
+
+  async function executeAnalysis(queryText: string) {
+    const trimmed = queryText.trim()
+    if (!trimmed || loading) return
 
     setLoading(true)
     setError('')
+    setActiveQuestion(trimmed)
 
     try {
       const response = await fetch('/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: value }),
+        body: JSON.stringify({ question: trimmed }),
       })
       const body = await response.json()
 
@@ -140,7 +67,18 @@ function App() {
         throw new Error(body.detail || 'The analysis request failed.')
       }
 
-      setResult(body as AnalysisResponse)
+      const analysisResult = body as AnalysisResponse
+      setResult(analysisResult)
+
+      // Add to session history
+      const newHistoryItem: HistoryItem = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        question: trimmed,
+        result: analysisResult,
+      }
+      setActiveHistoryId(newHistoryItem.id)
+      setHistory((prev) => [newHistoryItem, ...prev.slice(0, 19)]) // keep up to 20
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -152,147 +90,120 @@ function App() {
     }
   }
 
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    executeAnalysis(question)
+  }
+
+  function handleSelectExample(prompt: string) {
+    setQuestion(prompt)
+    executeAnalysis(prompt)
+  }
+
+  function handleSelectHistoryItem(item: HistoryItem) {
+    setQuestion(item.question)
+    setActiveQuestion(item.question)
+    setResult(item.result)
+    setActiveHistoryId(item.id)
+    setError('')
+  }
+
+  function handleClearHistory() {
+    setHistory([])
+    setActiveHistoryId(null)
+  }
+
+  function handleReset() {
+    setQuestion('')
+    setActiveQuestion('')
+    setResult(null)
+    setError('')
+    setActiveHistoryId(null)
+  }
+
+  function handleExport() {
+    if (!result) return
+    const md = formatBriefAsMarkdown(activeQuestion || question, result)
+    navigator.clipboard.writeText(md)
+    alert('Executive Brief copied to clipboard as Markdown!')
+  }
+
   return (
-    <main className="min-h-screen bg-[#f7f7f2] px-4 py-5 text-[#14241e] sm:px-8 sm:py-8">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-16 min-h-72 px-1">
-          <div className="flex items-center justify-between">
-            <p className="flex items-center gap-2 text-sm font-bold tracking-tight">
-              <span className="text-xl text-[#e86242]">◒</span>
-              Sales Assistant
-            </p>
-            <p className="flex items-center gap-2 text-xs text-[#64716b]">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Live data analysis
-            </p>
-          </div>
+    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
+      {/* Top Navbar */}
+      <Navbar
+        historyCount={history.length}
+        isHistoryOpen={isHistoryOpen}
+        onToggleHistory={() => setIsHistoryOpen((prev) => !prev)}
+        onReset={handleReset}
+        onExport={handleExport}
+        hasResult={Boolean(result)}
+      />
 
-          <div className="mt-16 max-w-3xl">
-            <p className="mb-3 font-mono text-[11px] font-medium tracking-[0.12em] text-[#39745e] uppercase">
-              Business intelligence, made conversational
-            </p>
-            <h1 className="font-display text-5xl leading-[0.96] font-bold tracking-[-0.055em] sm:text-7xl">
-              Ask a sharper question about your business.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#66736e]">
-              Get a concise conclusion, the supporting data, and practical next steps.
-            </p>
-          </div>
-        </header>
+      {/* Main Workspace */}
+      <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        {/* Sticky Prompt Bar Container */}
+        <div className="mb-6">
+          <QueryInput
+            question={question}
+            onChange={setQuestion}
+            onSubmit={handleSubmit}
+            loading={loading}
+            exampleQuestions={exampleQuestions}
+            onSelectExample={handleSelectExample}
+          />
+        </div>
 
-        <section className="rounded-2xl border border-[#e0e3db] bg-white p-5 shadow-[0_10px_32px_rgba(22,40,33,0.05)] sm:p-7">
-          <h2 className="text-lg font-semibold tracking-tight">What would you like to investigate?</h2>
-          <form onSubmit={handleSubmit} className="mt-4">
-            <label htmlFor="question" className="sr-only">Your business question</label>
-            <textarea
-              id="question"
-              rows={3}
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              disabled={loading}
-              placeholder="For example: Why did sales drop last week?"
-              className="w-full resize-y rounded-xl border border-[#cdd4ce] p-4 leading-relaxed outline-none transition focus:border-[#39745e] focus:ring-3 focus:ring-[#39745e]/15 disabled:bg-stone-50"
-            />
-            <div className="mt-3 flex items-end justify-between gap-4">
-              <span className="max-w-40 text-xs leading-snug text-[#73807a]">Uses verified sales and inventory data</span>
-              <button
-                type="submit"
-                disabled={!question.trim() || loading}
-                className="rounded-lg bg-[#1d4d3c] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#123e2e] disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                {loading ? 'Investigating…' : 'Analyze data →'}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-5 flex flex-wrap gap-2" aria-label="Example questions">
-            {exampleQuestions.map((example) => (
-              <button
-                key={example}
-                type="button"
-                onClick={() => setQuestion(example)}
-                className="rounded-full border border-[#d9dfd9] bg-[#f8f9f6] px-3 py-2 text-left text-xs text-[#4b5c55] transition hover:border-[#89aa9a] hover:bg-[#eff5ef]"
-              >
-                {example}
-              </button>
-            ))}
-          </div>
-        </section>
-
+        {/* Error Alert */}
         {error && (
-          <p role="alert" className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {error}
-          </p>
-        )}
-
-        {loading && (
-          <p className="mt-5 rounded-lg bg-[#edf5ee] p-4 text-sm text-[#39745e]">
-            The analyst is reviewing the data…
-          </p>
-        )}
-
-        {result && (
-          <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-            <section className="row-span-2 rounded-2xl border border-[#e0e3db] bg-white p-6 shadow-[0_10px_32px_rgba(22,40,33,0.05)] sm:p-8">
-              <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-[#39745e] uppercase">Analysis</p>
-              <h2 className="mt-3 font-display text-3xl leading-tight font-semibold tracking-[-0.04em] sm:text-4xl">
-                {result.answer.summary}
-              </h2>
-
-              {result.answer.findings.length > 0 && (
-                <div className="mt-8">
-                  <h3 className="font-semibold">Key findings</h3>
-                  <ul className="mt-3 grid gap-3 pl-5 text-[#425049] marker:text-[#39745e] marker:font-bold">
-                    {result.answer.findings.map((finding, index) => <li key={index}>{finding}</li>)}
-                  </ul>
-                </div>
-              )}
-
-              <div className="mt-8">
-                <h3 className="font-semibold">Conclusion</h3>
-                <p className="mt-2 leading-relaxed text-[#425049]">{result.answer.conclusion}</p>
-              </div>
-            </section>
-
-            {result.suggested_actions.length > 0 && (
-              <section className="rounded-2xl border border-[#d8e7d9] bg-[#edf5ee] p-6">
-                <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-[#39745e] uppercase">Recommended next steps</p>
-                <h2 className="mt-2 text-lg font-semibold">Suggested actions</h2>
-                <ol className="mt-4 grid gap-3 pl-5 text-sm leading-relaxed text-[#425049] marker:font-bold marker:text-[#39745e]">
-                  {result.suggested_actions.map((action, index) => <li key={index}>{action}</li>)}
-                </ol>
-              </section>
-            )}
-
-            {result.evidence.length > 0 && (
-              <section className="rounded-2xl border border-[#e0e3db] bg-white p-6 shadow-[0_10px_32px_rgba(22,40,33,0.05)]">
-                <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-[#39745e] uppercase">Verified data</p>
-                <h2 className="mt-2 text-lg font-semibold">Evidence</h2>
-                <div className="mt-4 grid gap-4">
-                  {result.evidence.map((item, index) => (
-                    <article key={`${item.source}-${index}`} className="border-t border-[#e4e8e2] pt-4 first:border-0 first:pt-0">
-                      <code className="text-[11px] font-medium text-[#39745e]">{item.source}</code>
-                      <ul className="mt-2 grid gap-2 font-mono text-xs leading-relaxed text-[#5c6963]">
-                        {item.data.map((line, lineIndex) => <li key={lineIndex}>{line}</li>)}
-                      </ul>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            )}
+          <div
+            role="alert"
+            className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-sm text-rose-800 shadow-xs"
+          >
+            <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold">Analysis Failed</h4>
+              <p className="mt-0.5 text-xs text-rose-700 leading-relaxed">{error}</p>
+            </div>
           </div>
         )}
 
-        {result && result.charts.length > 0 && (
-          <section className="mt-5">
-            <div className="grid gap-5 lg:grid-cols-2">
-              {result.charts.map((chart) => <AnalysisChart key={chart.id} chart={chart} />)}
+        {/* Dynamic Canvas Area */}
+        {loading ? (
+          <LoadingSkeleton />
+        ) : result ? (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Top Grid: Executive Summary & Action Plan */}
+            <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] items-start">
+              <ExecutiveSummary question={activeQuestion || question} result={result} />
+              <ActionPlan actions={result.suggested_actions} />
             </div>
-          </section>
+
+            {/* Interactive Charts */}
+            {result.charts && result.charts.length > 0 && (
+              <InteractiveCharts charts={result.charts} />
+            )}
+
+            {/* Evidence & SQL Inspector */}
+            {result.evidence && result.evidence.length > 0 && (
+              <EvidenceInspector evidence={result.evidence} />
+            )}
+          </div>
+        ) : (
+          <EmptyDashboard onSelectPrompt={handleSelectExample} />
         )}
-      </div>
-    </main>
+      </main>
+
+      {/* History Slide-over Drawer */}
+      <SidebarHistory
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={history}
+        activeId={activeHistoryId}
+        onSelect={handleSelectHistoryItem}
+        onClear={handleClearHistory}
+        onSelectPrompt={handleSelectExample}
+      />
+    </div>
   )
 }
-
-export default App
