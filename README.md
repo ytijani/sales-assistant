@@ -21,32 +21,75 @@ An enterprise-ready business intelligence platform that translates plain-English
 
 ---
 
-## Architecture Overview
+## Architecture & LangGraph Workflow
+
+The assistant operates as a stateful graph powered by **LangGraph**. Instead of relying on a single one-shot prompt, the analytics engine iteratively discovers database schemas, writes and validates SQL queries, inspects the live results, and synthesizes an executive brief with charts.
 
 ```mermaid
 flowchart TD
-    User([User / Browser]) <--> UI[React 19 Dashboard]
-    UI -->|POST /ask| API[FastAPI Gateway]
+    START([User Question]) --> llm["Node: llm (call_model)"]
     
-    subgraph Engine [Agent Analytics Engine]
-        API --> Graph[LangGraph State Workflow]
-        Graph -->|Prompt + Context| LLM[Groq Llama 3 / Mixtral]
-        LLM -->|Schema Discovery| ToolSchema[describe_schema]
-        LLM -->|Query Request| ToolSQL[query_sales_data]
+    llm -->|tools_condition| Decision{Tool Calls Needed?}
+    
+    %% Tool Execution Loop
+    Decision -->|Yes: Tool Call| tools["Node: tools (ToolNode)"]
+    
+    subgraph ToolExecution [Tool Execution & Security Layer]
+        tools --> ToolRouter{Tool Requested}
+        ToolRouter -->|describe_schema| SchemaInspection[Inspect Tables, Columns & Joins]
+        ToolRouter -->|query_sales_data| ASTCheck[sqlglot AST Validation]
+        ASTCheck -->|Blocked / Invalid| ToolError[Safe Error Message]
+        ASTCheck -->|Approved SELECT| LiveDB[(PostgreSQL Read-Only)]
     end
-
-    subgraph Security [SQL AST Safety Layer]
-        ToolSQL --> AST[sqlglot AST Validator]
-        AST -->|Deny DDL/DML/Multi-query| Reject[Safe Error Feedback]
-        AST -->|Allow Read-Only SELECT| DB[(PostgreSQL Live Data)]
+    
+    SchemaInspection --> ToolResult[Query/Schema Result Table]
+    LiveDB --> ToolResult
+    ToolError --> ToolResult
+    ToolResult -->|Append to state.messages| llm
+    
+    %% Synthesis Phase
+    Decision -->|No: Investigation Complete| format["Node: format_response"]
+    
+    subgraph Synthesis [Structured Synthesis Phase]
+        format --> StructuredLLM[Structured Output LLM]
+        StructuredLLM --> PydanticValidation[Pydantic Validation: StructuredAnalysis]
+        PydanticValidation --> ExecutiveBrief[1. Executive Brief & Findings]
+        PydanticValidation --> ChartGen[2. Interactive Charts Generator]
+        PydanticValidation --> ActionItems[3. Operational Action Plan]
     end
-
-    DB --> ToolSQL
-    ToolSQL --> LLM
-    LLM --> Structured[Structured Output Schema]
-    Structured --> API
-    API --> UI
+    
+    ExecutiveBrief --> END([Return Client-Ready JSON Payload])
+    ChartGen --> END
+    ActionItems --> END
 ```
+
+### How the Agent Processes Data Step-by-Step
+
+1. **Context Initialization (`START` &rarr; `llm`)**:
+   - The user question is anchored with current calendar context (e.g. interpreting "this week" or "yesterday" using `today`).
+   - The agent receives strict analytical guidelines: it is forbidden from answering questions from memory; it must ground every figure in database results.
+
+2. **Dynamic Schema Discovery (`describe_schema`)**:
+   - If the model needs to verify table columns, relations, or join keys, it calls `describe_schema`.
+   - The system inspects live `information_schema.columns` for approved relations (`sales`, `branches`, `products`, `inventory_view`).
+
+3. **Safe SQL Execution Loop (`query_sales_data`)**:
+   - The agent constructs a single, targeted read-only `SELECT` query with required aliases (`label`, `value`) and row limits (`LIMIT <= 200`).
+   - Every query is intercepted by the **AST safety layer** (`sqlglot`), verifying:
+     - Only `SELECT` statements are permitted.
+     - Destructive operations (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, etc.) and multi-statement injection are instantly blocked.
+     - Restricts queries strictly to approved public tables.
+   - If a query fails or syntax needs refinement, the agent receives the error message, self-corrects, and retries.
+
+4. **Multi-Hop Investigation**:
+   - The LLM can execute multiple queries in sequence (e.g. first checking overall sales trends, then breaking down by underperforming products, and finally verifying inventory stock for those products).
+
+5. **Structured Synthesis (`format_response` &rarr; `END`)**:
+   - Once all necessary data is collected, the graph transitions to `format_response`.
+   - It invokes a structured output model to produce a strict JSON payload matching `StructuredAnalysis`:
+     - **Executive Brief**: Concise summary, key numerical drivers, and commercial business context.
+     - **Visual Intelligence**: Dynamically mapped Bar charts (categories, products) and Line charts (timeseries) with verified numbers.
+     - **Operational Next Steps**: 2–3 tangible next steps for store managers or operations leads.
 
 ---
 
