@@ -92,6 +92,7 @@ Configure your credentials inside `backend/.env`:
 ```env
 AGENT_DATABASE_URL=postgresql+asyncpg://readonly_user:password@localhost:5432/pos
 GROQ_API_KEY=gsk_your_groq_api_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
 
 # Optional LangSmith Tracing
 LANGSMITH_TRACING=false
