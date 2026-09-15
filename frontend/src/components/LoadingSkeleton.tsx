@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Bot, CheckCircle2, CircleDashed, Database, LineChart, Sparkles } from 'lucide-react'
+import { CheckCircle2, CircleDashed, Database, FileSearch, LineChart, Search } from 'lucide-react'
 
 const steps = [
-  { label: 'Interpreting business intent & metrics', icon: Bot },
-  { label: 'Synthesizing safe SQL verification query', icon: Database },
-  { label: 'Querying live PostgreSQL / Supabase records', icon: Sparkles },
-  { label: 'Synthesizing visualizations & strategic brief', icon: LineChart },
+  { label: 'Understanding your question', icon: Search },
+  { label: 'Building the database query', icon: Database },
+  { label: 'Fetching results from PostgreSQL', icon: FileSearch },
+  { label: 'Preparing charts and summary', icon: LineChart },
 ]
 
 export function LoadingSkeleton() {
@@ -19,13 +19,13 @@ export function LoadingSkeleton() {
   }, [])
 
   return (
-    <div className="space-y-6 py-4 animate-in fade-in duration-300">
-      {/* Stepped progress card */}
+    <div className="space-y-6 py-4 animate-fade-in-up">
+      {/* Progress */}
       <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-white p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <CircleDashed className="h-5 w-5 animate-spin text-emerald-700" />
           <h3 className="text-sm font-bold text-slate-900">
-            Analyst Agent in Progress...
+            Working on it...
           </h3>
         </div>
 
@@ -63,7 +63,7 @@ export function LoadingSkeleton() {
         </div>
       </div>
 
-      {/* Shimmer Placeholder for Executive Brief */}
+      {/* Shimmer Brief */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs animate-pulse space-y-4">
         <div className="h-4 w-32 rounded bg-slate-200" />
         <div className="h-8 w-3/4 rounded-lg bg-slate-200" />
@@ -74,7 +74,7 @@ export function LoadingSkeleton() {
         </div>
       </div>
 
-      {/* Shimmer Placeholder for Charts */}
+      {/* Shimmer Charts */}
       <div className="grid gap-5 md:grid-cols-2">
         <div className="h-72 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs animate-pulse space-y-3">
           <div className="h-4 w-28 rounded bg-slate-200" />

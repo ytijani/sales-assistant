@@ -1,7 +1,8 @@
 {
-  "name": "frontend",
+  "name": "sales-assistant-ui",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Sales intelligence dashboard — AI-powered analytics over live PostgreSQL data",
   "packageManager": "pnpm@11.24.0",
   "type": "module",
   "scripts": {

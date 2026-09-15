@@ -1,4 +1,4 @@
-import { Clock, Trash2, X, ChevronRight, MessageSquareCode } from 'lucide-react'
+import { Clock, Trash2, X, ChevronRight, MessageSquare } from 'lucide-react'
 import type { HistoryItem } from '../types'
 
 type SidebarHistoryProps = {
@@ -47,7 +47,7 @@ export function SidebarHistory({
       <div className="flex items-center justify-between border-b border-slate-100 p-4">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-emerald-700" />
-          <h2 className="text-sm font-semibold text-slate-900">Session History</h2>
+          <h2 className="text-sm font-semibold text-slate-900">History</h2>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
             {history.length}
           </span>
@@ -58,7 +58,7 @@ export function SidebarHistory({
               type="button"
               onClick={onClear}
               className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-slate-100 transition"
-              title="Clear session history"
+              title="Clear history"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -67,29 +67,29 @@ export function SidebarHistory({
             type="button"
             onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100 transition"
-            title="Close sidebar"
+            title="Close"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* History content */}
+      {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
               <Clock className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-slate-700">No session queries yet</p>
+            <p className="text-sm font-medium text-slate-700">No queries yet</p>
             <p className="text-xs text-slate-400 mt-1 max-w-[220px]">
-              Ask a question about sales or inventory to build your session history.
+              Your past questions and results will appear here.
             </p>
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-              Recent Inquiries
+              Recent
             </p>
             <div className="space-y-1.5">
               {history.map((item) => {
@@ -128,9 +128,9 @@ export function SidebarHistory({
         {/* Starter Prompts */}
         <div className="border-t border-slate-100 pt-5 space-y-4">
           <div className="flex items-center gap-1.5">
-            <MessageSquareCode className="h-3.5 w-3.5 text-slate-400" />
+            <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
             <p className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-              Suggested Question Bank
+              Suggested Questions
             </p>
           </div>
           {starterPromptsByCategory.map((cat) => (

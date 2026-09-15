@@ -1,5 +1,5 @@
 import { type FormEvent, type KeyboardEvent, useRef, useEffect } from 'react'
-import { ArrowRight, CornerDownLeft, Sparkles, X } from 'lucide-react'
+import { ArrowRight, CornerDownLeft, Search, X } from 'lucide-react'
 
 type QueryInputProps = {
   question: string
@@ -43,8 +43,8 @@ export function QueryInput({
         className="group relative rounded-2xl border border-slate-200/90 bg-white p-2.5 shadow-sm transition-all focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 hover:border-slate-300"
       >
         <div className="flex items-start gap-3 p-2">
-          <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xs">
-            <Sparkles className="h-4 w-4" />
+          <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 group-focus-within:bg-emerald-50 group-focus-within:text-emerald-600 transition-colors">
+            <Search className="h-4 w-4" />
           </div>
 
           <textarea
@@ -54,7 +54,7 @@ export function QueryInput({
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={loading}
-            placeholder="Ask anything about sales, revenue, top branches, or low-stock inventory..."
+            placeholder="Ask anything about sales, revenue, top branches, or inventory levels..."
             className="w-full resize-none bg-transparent py-1 text-sm sm:text-[15px] leading-relaxed text-slate-800 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
           />
 
@@ -90,11 +90,11 @@ export function QueryInput({
         </div>
       </form>
 
-      {/* Suggested prompts pills */}
+      {/* Suggested prompts */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1 mr-1">
           <CornerDownLeft className="h-3 w-3" />
-          Suggested queries:
+          Try:
         </span>
         {exampleQuestions.map((example) => (
           <button

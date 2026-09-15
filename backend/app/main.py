@@ -24,7 +24,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Sales/Inventory Assistant",
+    title="Sales Assistant API",
+    description="Natural-language analytics engine for sales performance and inventory health. Queries are validated, executed against a read-only PostgreSQL connection, and returned as structured briefs with charts.",
+    version="1.0.0",
     lifespan=lifespan,
 )
 

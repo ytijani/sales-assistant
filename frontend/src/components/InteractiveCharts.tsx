@@ -47,29 +47,25 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-xs transition-all">
-      {/* Header with Title & Chart Tabs */}
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-xs transition-all animate-fade-in-up stagger-2">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
         <div>
           <div className="flex items-center gap-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
               <TrendingUp className="h-3.5 w-3.5" />
             </span>
-            <span className="text-[11px] font-bold tracking-wider text-emerald-800 uppercase">
-              Visual Intelligence
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="text-xs text-slate-500">
-              {currentChart.y_axis} vs {currentChart.x_axis}
+            <span className="text-sm font-bold text-slate-900 tracking-tight">
+              {currentChart.title}
             </span>
           </div>
-          <h3 className="mt-1.5 text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            {currentChart.title}
-          </h3>
+          <p className="mt-1 text-xs text-slate-500">
+            {currentChart.y_axis} by {currentChart.x_axis}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Multiple Chart Segmented Switcher (solves multi-data clutter) */}
+          {/* Chart Switcher */}
           {validCharts.length > 1 && (
             <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/70">
               {validCharts.map((chart, idx) => (
@@ -92,7 +88,7 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
             </div>
           )}
 
-          {/* Bar / Line Type Toggle */}
+          {/* Bar / Line Toggle */}
           <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/70">
             <button
               type="button"
@@ -102,7 +98,7 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
                   ? 'bg-white text-emerald-800 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
-              title="Switch to Bar Chart"
+              title="Bar Chart"
             >
               <BarChart3 className="h-3.5 w-3.5" />
               <span>Bar</span>
@@ -115,7 +111,7 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
                   ? 'bg-white text-emerald-800 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
-              title="Switch to Line Chart"
+              title="Line Chart"
             >
               <LineChartIcon className="h-3.5 w-3.5" />
               <span>Line</span>
@@ -124,11 +120,11 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
         </div>
       </div>
 
-      {/* Quick Key Metrics Bar */}
+      {/* Metrics */}
       <div className="mt-5 grid grid-cols-3 gap-3 rounded-xl bg-slate-50/80 p-3 text-center border border-slate-100">
         <div>
           <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-            Total Metric
+            Total
           </span>
           <span className="text-sm sm:text-base font-extrabold text-slate-800">
             {formatVal(sumVal)}
@@ -136,7 +132,7 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
         </div>
         <div className="border-x border-slate-200/60">
           <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-            Peak Performance
+            Highest
           </span>
           <span className="text-sm sm:text-base font-extrabold text-emerald-700">
             {formatVal(maxVal)}
@@ -144,7 +140,7 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
         </div>
         <div>
           <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-            Average / Unit
+            Average
           </span>
           <span className="text-sm sm:text-base font-extrabold text-slate-800">
             {formatVal(avgVal)}
@@ -152,7 +148,7 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
         </div>
       </div>
 
-      {/* Chart Canvas */}
+      {/* Chart */}
       <div className="mt-6 h-72 sm:h-80 w-full" aria-label={currentChart.title}>
         <ResponsiveContainer width="100%" height="100%">
           {chartType === 'line' ? (
@@ -203,6 +199,12 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
               data={points}
               margin={{ top: 16, right: 16, left: -10, bottom: crowded ? 32 : 12 }}
             >
+              <defs>
+                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#059669" />
+                  <stop offset="100%" stopColor="#047857" />
+                </linearGradient>
+              </defs>
               <CartesianGrid vertical={false} stroke="#f1f5f9" strokeDasharray="3 3" />
               <XAxis
                 dataKey="label"
@@ -226,7 +228,7 @@ export function InteractiveCharts({ charts }: InteractiveChartsProps) {
                   color: '#0f172a',
                 }}
               />
-              <Bar dataKey="value" fill="#059669" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
             </BarChart>
           )}
         </ResponsiveContainer>

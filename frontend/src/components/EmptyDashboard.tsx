@@ -4,7 +4,6 @@ import {
   Store,
   CheckCircle2,
   ShieldCheck,
-  Zap,
 } from 'lucide-react'
 
 type EmptyDashboardProps = {
@@ -14,57 +13,51 @@ type EmptyDashboardProps = {
 export function EmptyDashboard({ onSelectPrompt }: EmptyDashboardProps) {
   const cards = [
     {
-      title: 'Sales Performance Diagnostic',
-      desc: 'Compare period-over-period revenue, identify product movers, and pinpoint volume shifts.',
+      title: 'Sales Performance',
+      desc: 'Compare period-over-period revenue, identify top products, and pinpoint volume shifts across branches.',
       prompt: 'What changed in sales from 2026-09-01 to 2026-09-07?',
       icon: TrendingUp,
-      color: 'emerald',
-      badge: 'Sales DB',
+      badge: 'Revenue',
     },
     {
-      title: 'Inventory & Stock Risk Analysis',
+      title: 'Inventory Health',
       desc: 'Identify SKUs approaching safety thresholds and categories with impending stockout risks.',
       prompt: 'Are there any low-stock products I should review?',
       icon: Package,
-      color: 'amber',
-      badge: 'Stock Levels',
+      badge: 'Stock',
     },
     {
-      title: 'Branch & Product Benchmarks',
-      desc: 'Evaluate lower-performing items and optimize distribution across sales branches.',
+      title: 'Product Benchmarks',
+      desc: 'Evaluate lower-performing items and compare distribution performance across sales branches.',
       prompt: 'Which products had the lowest sales last week?',
       icon: Store,
-      color: 'blue',
-      badge: 'Branch Intel',
+      badge: 'Ranking',
     },
   ]
 
   return (
     <section className="py-6 sm:py-12">
-      {/* Hero Intro */}
-      <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3.5 py-1 text-xs font-semibold text-emerald-800 mb-5 shadow-2xs">
-          <Zap className="h-3.5 w-3.5 text-emerald-600" />
-          <span>PostgreSQL Grounded Copilot</span>
-        </div>
+      {/* Hero */}
+      <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14 animate-fade-in-up">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-          Turn enterprise data into your next strategic move.
+          Ask a question,<br />get the full picture.
         </h1>
         <p className="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl mx-auto">
-          Ask questions in plain English. Get answers synthesized by LangGraph, verified against live SQL tables, and visualized with decision-ready charts.
+          Type a question in plain English. Your answer comes back with verified numbers, 
+          interactive charts, and a clear action plan — all from your live database.
         </p>
       </div>
 
-      {/* 3 Starter Cards */}
+      {/* Starter Cards */}
       <div className="grid gap-5 md:grid-cols-3">
-        {cards.map((card) => {
+        {cards.map((card, idx) => {
           const Icon = card.icon
           return (
             <button
               key={card.title}
               type="button"
               onClick={() => onSelectPrompt(card.prompt)}
-              className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 text-left shadow-xs hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5 transition-all"
+              className={`group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 text-left shadow-xs hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5 transition-all animate-fade-in-up stagger-${idx + 1}`}
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -94,8 +87,8 @@ export function EmptyDashboard({ onSelectPrompt }: EmptyDashboardProps) {
         })}
       </div>
 
-      {/* Trust & Transparency banner */}
-      <div className="mt-10 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6">
+      {/* Trust Banner */}
+      <div className="mt-10 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-5 sm:p-6 animate-fade-in-up stagger-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-800 shrink-0">
@@ -103,10 +96,10 @@ export function EmptyDashboard({ onSelectPrompt }: EmptyDashboardProps) {
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                Live Database Grounding & Evidence-Backed
+                Every Answer Is Verified & Auditable
               </h4>
               <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
-                All numbers are extracted through restricted SQL queries with safe layer guardrails.
+                All numbers come from read-only queries against your database. You can inspect every SQL query behind any result.
               </p>
             </div>
           </div>
@@ -117,7 +110,7 @@ export function EmptyDashboard({ onSelectPrompt }: EmptyDashboardProps) {
             </span>
             <span className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 border border-slate-200/80 shadow-2xs">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              Inventory Stock
+              Inventory
             </span>
             <span className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 border border-slate-200/80 shadow-2xs">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />

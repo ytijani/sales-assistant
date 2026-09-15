@@ -1,4 +1,4 @@
-import { Database, History, PlusCircle, Share2, Sparkles } from 'lucide-react'
+import { BarChart3, History, PlusCircle, Share2 } from 'lucide-react'
 
 type NavbarProps = {
   historyCount: number
@@ -18,38 +18,34 @@ export function Navbar({
   hasResult,
 }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-md transition-all">
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-md gradient-border transition-all">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Brand */}
         <div className="flex items-center gap-3 cursor-pointer select-none" onClick={onReset}>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-800 via-emerald-700 to-teal-600 shadow-md shadow-emerald-900/10 text-white">
-            <Sparkles className="h-5 w-5" />
+            <BarChart3 className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold tracking-tight text-slate-900 sm:text-base text-sm">
                 Sales Assistant
               </span>
-              <span className="rounded-full bg-emerald-100/80 px-2 py-0.5 text-[9px] font-bold text-emerald-800 tracking-wider uppercase">
-                Copilot
-              </span>
             </div>
             <p className="text-[11px] font-medium text-slate-500 hidden sm:block">
-              Executive Decision & Sales Intelligence
+              Sales & Inventory Intelligence
             </p>
           </div>
         </div>
 
-        {/* Status and Action Buttons */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Live DB Connection Badge */}
+          {/* Connection Status */}
           <div className="hidden md:flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/70 px-3 py-1 text-xs font-semibold text-emerald-800">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
             </span>
-            <Database className="h-3 w-3 text-emerald-600" />
-            <span>PostgreSQL Verified</span>
+            <span>Connected</span>
           </div>
 
           {hasResult && (
@@ -61,7 +57,7 @@ export function Navbar({
                 title="Copy full brief to clipboard"
               >
                 <Share2 className="h-3.5 w-3.5 text-slate-500" />
-                <span className="hidden sm:inline">Export Brief</span>
+                <span className="hidden sm:inline">Export</span>
               </button>
 
               <button
@@ -71,12 +67,12 @@ export function Navbar({
                 title="Start a new analysis"
               >
                 <PlusCircle className="h-3.5 w-3.5 text-slate-500" />
-                <span className="hidden sm:inline">New Query</span>
+                <span className="hidden sm:inline">New</span>
               </button>
             </>
           )}
 
-          {/* History Drawer Toggle Button */}
+          {/* History Toggle */}
           <button
             type="button"
             onClick={onToggleHistory}
