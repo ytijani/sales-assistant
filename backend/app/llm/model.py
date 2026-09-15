@@ -9,12 +9,14 @@ from app.config import settings
 
 def get_llm() -> BaseChatModel:
     if not settings.groq_api_key:
-        raise ValueError("GROQ_API_KEY is required to initialize Groq LLM")
+        raise ValueError("GROQ_API_KEY is required in .env")
+    if not settings.groq_model:
+        raise ValueError("GROQ_MODEL is required in .env (e.g. GROQ_MODEL=llama-3.3-70b-versatile)")
 
     kwargs: dict = {
         "model": settings.groq_model,
         "temperature": 0,
-        "api_key": SecretStr(settings.groq_api_key or ""),
+        "api_key": SecretStr(settings.groq_api_key),
     }
 
     # Only pass reasoning_effort to models that support it (e.g. gpt-oss, deepseek-r1)

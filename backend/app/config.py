@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     agent_database_url: str | None = None
     groq_api_key: str | None = None
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str | None = None
 
 
 settings = Settings()
